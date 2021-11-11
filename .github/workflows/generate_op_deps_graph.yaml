@@ -1,0 +1,61 @@
+name: Generate Op Deps Graph
+
+on:
+  push:
+    branches: [ main ]
+
+  pull_request:
+    # branches: [ main ]
+
+  schedule:
+    - cron: '30 2 * * *'
+
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: PyTorch Git Ref (Optional)
+        required: false
+
+jobs:
+
+  platform-ubuntu_generate-op-deps-graph:
+
+    runs-on: ubuntu-latest
+    env:
+      NAME: platform-ubuntu.generate-op-deps-graph
+
+    steps:
+    - name: install clang/llvm 8
+      run: |
+        sudo apt-get install -y llvm-8-dev clang-8
+
+    - name: setup python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - uses: actions/checkout@v2
+
+    - name: checkout pytorch
+      run: |
+        git clone --recursive https://github.com/pytorch/pytorch pytorch
+        echo "PYTORCH_REV=$(cd pytorch; git rev-parse HEAD)" >> $GITHUB_ENV
+
+    - name: install pytorch pip dependency
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install -r pytorch/requirements.txt
+      shell: bash
+
+    - name: generate op deps graph
+      run: |
+        PYTORCH_ROOT=$(readlink -f pytorch) \
+        LLVM_DIR=/usr/lib/llvm-8 \
+        ANALYZE_TORCH=1 ./build.sh
+
+    - name: upload op deps graph
+      uses: actions/upload-artifact@v2
+      with:
+        name: op-deps-graph
+        path: build/work/torch_op_deps.yaml
+        if-no-files-found: ignore
