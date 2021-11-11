@@ -41,6 +41,17 @@ jobs:
         git clone --recursive https://github.com/pytorch/pytorch pytorch
         echo "PYTORCH_REV=$(cd pytorch; git rev-parse HEAD)" >> $GITHUB_ENV
 
+    - name: create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.PYTORCH_REV }}-${{ github.ref }}
+        release_name: Op Dependency Graph for PyTorch Rev ${{ env.PYTORCH_REV }}
+        draft: false
+        prerelease: false
+
     - name: install pytorch pip dependency
       run: |
         python3 -m pip install --upgrade pip
@@ -59,3 +70,19 @@ jobs:
         name: op-deps-graph
         path: build/work/torch_op_deps.yaml
         if-no-files-found: ignore
+
+    - name: compress op deps graph
+      run: |
+        tar zcf torch_op_deps.tar.gz -C build/work torch_op_deps.yaml
+      shell: bash
+
+    - name: upload release asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./torch_op_deps.tar.gz
+        asset_name: torch_op_deps.tar.gz
+        asset_content_type: text/plain
