@@ -75,14 +75,18 @@ jobs:
         path: build/work/torch_op_deps.yaml
         if-no-files-found: ignore
 
+    - name: get current date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
     - name: create release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}.${{ env.PYTORCH_REV }}
-        release_name: Op dependency graph for PyTorch rev-${{ env.PYTORCH_REV }}
+        tag_name: nightly-tag-${{ steps.date.outputs.date }}
+        release_name: nightly-op-graph-${{ steps.date.outputs.date }}-pytorch-rev-${{ env.PYTORCH_REV }}
         draft: false
         prerelease: false
 
